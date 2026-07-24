@@ -1,0 +1,69 @@
+O_GEOMTY  PrintFile   C:\Users\Evan Griffith\FEB SN5 Global\FEB_DYNAMICS_SN5\SN5-front (2).GEM
+          OriginalFN  C:\Users\Evan Griffith\FEB SN5 Global\FEB_DYNAMICS_SN5\SN5-front (2).GEM
+          Description Double A-Arm, Push-rod, swaybar Demo - Standard units
+          Date & Time 11/11/2025 5:28:26 PM
+Rotation Point:
+ 97 X=     0.000 Y=    15.000 Z=     0.000 Rotation Point                
+ 
+Right side points:
+  0 X=     0.000 Y=     0.000 Z=     0.000 Origin coordinate system    O 
+  1 X=   138.937 Y=   207.336 Z=   104.696 Lower A-arm forward         A 
+  2 X=     3.066 Y=   550.978 Z=   113.551 Lower ball joint            B 
+  3 X=  -150.000 Y=   222.000 Z=   118.539 Lower A-arm rearward        C 
+  4 X=   121.627 Y=   263.000 Z=   266.675 Upper A-arm forward         D 
+  5 X=   -15.735 Y=   519.435 Z=   292.438 Upper ball joint            E 
+  6 X=  -111.130 Y=   259.000 Z=   254.356 Upper A-arm rearward        F 
+ 
+  8 X=    65.000 Y=   556.726 Z=   191.077 Steering tie-rod on hub     S 
+  9 X=    65.000 Y=   182.880 Z=   170.426 Steering tie-rod inboard    T 
+ 10 X=     0.000 Y=   611.454 Z=   203.170 Hub center                  H 
+ 11 X=     0.000 Y=   616.453 Z=   203.257 Hub center extension        K 
+ 12 X=     0.000 Y=   615.000 Z=     0.000 Static contact/Locked wheel N 
+ 13 X=     0.000 Y=   615.000 Z=     0.000 Contact point                 
+ 
+O_GEOMTY  Right side Track and other variables
+Track       1230.000   Tire_Diam    406.401   Rim_Width    177.800
+Camber        -1.000   Toe degs       0.000   Toe inch       0.000
+Tire bottom X     0.000Tire Bottom Z     0.000
+Wheelbase   1550.000   Offset         0.000
+ 
+Right side auxiliary points:
+ 27 X=     3.066 Y=   255.000 Z=   565.000 Spring upper on CHASSIS     U Want Spring
+ 28 X=     3.066 Y=   518.000 Z=   137.500 Spring lower on SUSPENSION  V Want Spring
+ 
+Left side points:
+101 X=   138.937 Y=   207.336 Z=   104.696 Lower A-arm forward         A 
+102 X=     3.066 Y=   550.978 Z=   113.551 Lower ball joint            B 
+103 X=  -150.000 Y=   222.000 Z=   118.539 Lower A-arm rearward        C 
+104 X=   121.627 Y=   263.000 Z=   266.675 Upper A-arm forward         D 
+105 X=   -15.735 Y=   519.435 Z=   292.438 Upper ball joint            E 
+106 X=  -111.130 Y=   259.000 Z=   254.356 Upper A-arm rearward        F 
+ 
+108 X=    65.000 Y=   556.726 Z=   191.077 Steering tie-rod on hub     S 
+109 X=    65.000 Y=   182.880 Z=   170.426 Steering tie-rod inboard    T 
+110 X=     0.000 Y=   611.454 Z=   203.170 Hub center                  H 
+111 X=     0.000 Y=   616.453 Z=   203.257 Hub center extension        K 
+112 X=     0.000 Y=   615.000 Z=     0.000 Static contact/Locked wheel N 
+113 X=     0.000 Y=   615.000 Z=     0.000 Contact point                 
+ 
+O_GEOMTY  Left side Track and other variables
+Track       1230.000   Tire_Diam    406.401   Rim_Width    177.800
+Camber        -1.000   Toe degs       0.000   Toe inch       0.000
+Tire bottom X     0.000Tire Bottom Z     0.000
+ 
+Left side auxiliary points:
+127 X=     3.066 Y=   255.000 Z=   565.000 Spring upper on CHASSIS     U Want Spring
+128 X=     3.066 Y=   518.000 Z=   137.500 Spring lower on SUSPENSION  V Want Spring
+
+Data description:
+
+This PushDemo file is an example of a double A-Arm suspension with a push-rod  
+between a bell-crank and the lower wishbone.  The spring/shock is attached to  
+the bell-crank, which rotates in reaction to movement of the suspension.       
+The swaybar is also attached to the bell-crank.                                
+This example also includes a halfshaft, but it can also be steered.            
+This data came from the old FREEBODY file "C:\Delphi\WinGeo\PushDemo.geo".
+
+
+
+O_GEOMTY end of ShowPoints
