@@ -19,8 +19,9 @@ ls_clicks_comp = 4;
 hs_clicks_comp = 1;
 
 % --- LOAD INTERPOLATED DYNO DATA ---
-% Ensure 'damper_3D_matrix.mat' is in your MATLAB path
-load('damper_3D_matrix.mat'); 
+% Resolve the data relative to this script so it works from any folder.
+model_dir = fileparts(mfilename('fullpath'));
+load(fullfile(model_dir, 'damper_3D_matrix.mat'));
 
 % Ensure variables are double precision for interpolation.
 vel_mm = double(vel_mm); 
@@ -67,12 +68,19 @@ force_si = force_N;  % N
 c_crit = 2*sqrt(k*m1) * abs(vel_si);
 c_table = [force_si'; vel_si'];
 
-h = 0.03; % 30 mm bump
-
-
 dt = 0.001;  % time step, s
-tmax = 20;  % max time, s
-tdist = 6;  % disturbance time, s
+tmax = 6;    % max time, s
+tdist = 1;   % time the tire reaches the bump, s
+
+% The road is defined spatially, then traversed at vehicle_speed.  Change
+% profile_type to sharp_bump, pothole, washboard, rough, or flat to run one
+% of the other profiles implemented in generate_road_profile.m.  Run
+% quarter_car_road_sweep.m to compare all conditions and several speeds.
+profile_type = "smooth_bump";
+vehicle_speed = 10; % m/s
+road_params = struct('height', 0.030, ... % 30 mm
+                     'length', 0.400, ... % 400 mm
+                     'start_time', tdist);
 
 %F-k(x1-x2)-c(x1'-x2')=m1x1"
 
@@ -114,7 +122,8 @@ X0 = [0; 0; 0; 0];
 
 t_vec = 0:dt:tmax;
 
-xt = h * (t_vec > tdist);
+[xt, road_info] = generate_road_profile( ...
+    profile_type, t_vec, vehicle_speed, road_params);
 
 % This quarter-car model is not stiff; ode15s spends unnecessary time
 % estimating Jacobians around the road-step transition.  ode45 matches the
@@ -126,6 +135,7 @@ opts = odeset('RelTol',1e-6,'AbsTol',1e-8,'MaxStep',0.01);
 
 x1 = X_sol(:,1);  % sprung displacement
 x2 = X_sol(:,3);  % unsprung displacement
+road_sol = interp1(t_vec, xt, t_sol, 'linear', 0);
 
 % Equivalent viscous damping ratio is F/(2*sqrt(k*m)*v).  It is undefined
 % at zero velocity, so leave that single point out of the plot rather than
@@ -139,13 +149,17 @@ damping_ratio_design(nonzero_velocity) = abs(c_designsmooth(nonzero_velocity)) .
     ./ c_crit(nonzero_velocity);
 
 figure
-plot(t_sol, x1, 'LineWidth', 1.5)
+plot(t_sol, 1000*x1, 'LineWidth', 1.5)
 hold on
-plot(t_sol, x2, 'LineWidth', 1.5)
-legend('Sprung','Unsprung')
+plot(t_sol, 1000*x2, 'LineWidth', 1.5)
+plot(t_sol, 1000*road_sol, 'k--', 'LineWidth', 1.2)
+legend('Sprung mass', 'Unsprung mass', 'Road input')
 xlabel('Time (s)', 'FontSize', 14)
-ylabel('Displacement (m)', 'FontSize', 14)
-title('Displacement from Bump Disturbance', 'FontSize', 20)
+ylabel('Displacement (mm)', 'FontSize', 14)
+title(sprintf('Response to %s at %.0f m/s', ...
+    strrep(profile_type, '_', ' '), vehicle_speed), 'FontSize', 20)
+xlim([max(0, road_info.start_time - 0.1), ...
+      min(tmax, road_info.end_time + 1.5)])
 grid on
 
 figure
