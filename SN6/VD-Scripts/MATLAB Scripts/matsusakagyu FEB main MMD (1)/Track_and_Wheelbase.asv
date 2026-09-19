@@ -1,0 +1,82 @@
+%% Assumptions and Notes
+% Gift from DUO
+% This helps understand the effects of track width and wheelbase.
+% Two variants will be used.
+% Variant 1: Open‑loop chassis property (δ = 0): “What yaw moment does the tire system produce at a given ay if the wheels are held straight?”
+% Variant 2: Ackermann (δ = L/R): “What residual yaw moment remains if you steer just the geometric amount?”
+% This model uses a simple 4 wheel model that takes into account load transfer.
+% This model assumes parallel steer ie front slip angles are the same.
+% This model assumes linear, load sensitive tires. I acknowledge 
+% This model assumes constant speed
+
+%% Variant 1: Open-loop chassis property
+%----Simulation Setup----
+R = 7.625; % skidpad radius (m)
+vx = 7; % (m/s)
+delta = linspace(0, 0.05 * pi/180, 15 * pi/180);
+ay = vx^2 / R;
+
+%----Vehicle Properties----
+m = 280; % mass (kg)
+h_cg = 0.25; % cg height (m)
+L = 1.5; % wheelbase (m)
+lf = 0.8; % front to cg (m) (aka a)
+lr = L - lf; % rear to cg (m) (aka b)
+tf = 1.2; % front track width (m)
+tr = 1.2; % rear track width (m)
+C_a_ref = 60; % reference cornering stiffness per tire (N/rad)
+Fz_ref = 1.75; % reference load for stiffness scaling (N)
+n = 0.9; % load sensitivity exponent
+g = 9.81; % gravity (m/s^2)
+Kf = 436; % front roll stiffness (kN*m/rad) .... 2 * k_wheel * (tf / 2)^2 + Kf_arb
+Kr = 436; % rear roll stiffness (kN*m/rad) .... 2 * k_wheel * (tr / 2)^2 + Kr_arb
+zf = Kf / (Kf + Kr);
+zr = 1 - zf;
+
+Wf = lr/L*m*g;
+Wr = lf/L*m*g;
+
+%----Simple 4 Wheel Model----
+r = vx / R; %yaw rate (rad/sec)
+vy = 0;
+
+%slip angles
+a_fl = delta - beta - lf * r / vx;
+a_fr = delta - beta - lf * r / vx;
+a_rl = - beta - lf * r / vx;
+a_rr = -atan((vy - lr*r) / vx);
+
+%moments
+M_lat = m*ay*h_cg;
+M_f = zf*M_lat;
+M_r = zr*M_lat;
+
+%load transfer
+delta_Fz_f = M_f / tf;
+delta_Fz_r = M_r / tr;
+
+%tire vertical loads
+Fz_fl = Wf/2 + delta_Fz_f/2;
+Fz_fr = Wf/2 - delta_Fz_f/2;
+Fz_rl = Wf/2 + delta_Fz_f/2;
+Fz_rr = Wf/2 - delta_Fz_f/2;
+
+%tire model
+C_fl = C_a_ref * (Fz_fl / Fz_ref)^n;
+C_fr = C_a_ref * (Fz_fr / Fz_ref)^n;
+C_rl = C_a_ref * (Fz_rl / Fz_ref)^n;
+C_rr = C_a_ref * (Fz_rr / Fz_ref)^n;
+Fy_fl = C_fl * a_fl;
+Fy_fr = C_rl * a_rl;
+Fy_rl = C_rl * a_rl;
+Fy_rr = C_rr * a_rr;
+
+%----Solve----
+ay = (Fy_fl + Fy_fr + Fy_rl + Fy_rr) / m;
+Fy_f = (lr/L) * m * ay;
+Fy_r = (lf/L) * m * ay;
+Mz = lf*Fy_f - lr*Fy_r;
+
+%----Plot----
+figure
+plot(ay, Mz)

@@ -1,0 +1,36 @@
+function annotate_MMD(ax)
+% annotate_MMD - overlay interpretive guide on a Moment Method Diagram plot
+%
+% Usage:
+%   fig = figure; ... plot your MMD ...
+%   annotate_MMD(gca);
+
+if nargin < 1, ax = gca; end
+axes(ax); hold on;
+
+% y=0 line: neutral balance reference
+plot(xlim, [0 0], 'k--', 'LineWidth', 0.8, 'DisplayName','Neutral (CN=0)');
+
+% Add text annotations
+yl = ylim; xl = xlim;
+text(mean(xl), 0.05*yl(2), 'Oversteer tendency (+CN)', ...
+    'Color',[0 0.4 0], 'FontSize',9, 'FontWeight','bold', ...
+    'HorizontalAlignment','center');
+text(mean(xl), 0.05*yl(1), 'Understeer tendency (-CN)', ...
+    'Color',[0.6 0 0], 'FontSize',9, 'FontWeight','bold', ...
+    'HorizontalAlignment','center');
+
+% Mark tips of diamond
+text(xl(2), 0, '  Max lateral accel →', ...
+    'Color','b','FontSize',8,'HorizontalAlignment','left','Rotation',0);
+text(xl(1), 0, '← Max lateral accel', ...
+    'Color','b','FontSize',8,'HorizontalAlignment','right','Rotation',0);
+
+text(mean(xl), yl(2), 'Agility limit (max yaw moment)', ...
+    'Color','m','FontSize',8,'FontWeight','bold', ...
+    'HorizontalAlignment','center','VerticalAlignment','bottom');
+text(mean(xl), yl(1), 'Stability limit (counter-yaw)', ...
+    'Color','m','FontSize',8,'FontWeight','bold', ...
+    'HorizontalAlignment','center','VerticalAlignment','top');
+
+end
