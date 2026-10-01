@@ -12,10 +12,12 @@ clc
 model_dir = fileparts(mfilename('fullpath'));
 
 % --- FRONT-CORNER VEHICLE PARAMETERS ---
-m1 = 141.885/2;     % sprung mass, kg
-m2 = 22.36/2;       % unsprung mass, kg
-k = 35683.525;      % suspension spring rate, N/m
-kt = 101573.528;    % tire vertical stiffness, N/m
+vehicle = quarter_car_parameters();
+corner = vehicle.front;
+m1 = corner.sprung_mass;    % sprung mass, kg
+m2 = corner.unsprung_mass;  % unsprung mass, kg
+k = corner.wheel_rate;      % motion-ratio-adjusted wheel rate, N/m
+kt = corner.tire_rate;      % tire vertical stiffness, N/m
 
 % --- CURRENT OHLINS TTX25 SETTINGS ---
 damper_settings = struct( ...
@@ -69,8 +71,8 @@ for scenario_index = 1:numel(scenarios)
         [road_input, road_info] = generate_road_profile( ...
             scenario.type, t_vec, vehicle_speed, scenario.params);
 
-        response = simulate_quarter_car(t_vec, road_input, ...
-            m1, m2, k, kt, damper_velocity, damper_force, dt);
+        response = simulate_quarter_car(t_vec, road_input, corner, ...
+            damper_velocity, damper_force, dt);
 
         metrics = calculate_response_metrics(response, m1, m2, k, kt, ...
             road_info, tmax);
@@ -225,15 +227,15 @@ force_n(velocity_mmps >= 0) = compression_force(velocity_mmps >= 0);
 velocity_mps = velocity_mmps/1000;
 end
 
-function response = simulate_quarter_car(t_vec, road_input, ...
-    m1, m2, k, kt, damper_velocity, damper_force, output_step)
+function response = simulate_quarter_car(t_vec, road_input, corner, ...
+    damper_velocity, damper_force, output_step)
 
 initial_state = [0; 0; 0; 0];
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-8, ...
     'MaxStep', output_step/2);
 
 [t_sol, state] = ode45(@(t, x) quarter_car_rhs(t, x, ...
-    m1, m2, k, kt, damper_velocity, damper_force, ...
+    corner, damper_velocity, damper_force, ...
     t_vec, road_input), t_vec, initial_state, options);
 
 road_at_solution = interp1(t_vec, road_input, t_sol, 'linear', 0);
@@ -242,16 +244,20 @@ x1_velocity = state(:, 2);
 x2 = state(:, 3);
 x2_velocity = state(:, 4);
 
-relative_velocity = x1_velocity - x2_velocity;
+relative_velocity = corner.motion_ratio*(x2_velocity - x1_velocity);
 clamped_velocity = min(max(relative_velocity, damper_velocity(1)), ...
     damper_velocity(end));
-damper_force_at_solution = interp1(damper_velocity, damper_force, ...
+shaft_force_at_solution = interp1(damper_velocity, damper_force, ...
     clamped_velocity, 'linear');
-body_acceleration = (-k*(x1 - x2) - damper_force_at_solution)/m1;
+damper_force_at_solution = corner.motion_ratio*shaft_force_at_solution;
+body_acceleration = (-corner.wheel_rate*(x1 - x2) + ...
+    damper_force_at_solution)/corner.sprung_mass;
 
-static_tire_load = (m1 + m2)*9.81;
-dynamic_tire_load = kt*(road_at_solution - x2);
-tire_load = static_tire_load + dynamic_tire_load;
+static_tire_load = corner.static_tire_load;
+linear_tire_load = static_tire_load + ...
+    corner.tire_rate*(road_at_solution - x2);
+tire_load = max(0, linear_tire_load);
+dynamic_tire_load = tire_load - static_tire_load;
 
 response = struct( ...
     't', t_sol, ...
@@ -266,7 +272,7 @@ response = struct( ...
     'tire_load', tire_load);
 end
 
-function derivative = quarter_car_rhs(t, state, m1, m2, k, kt, ...
+function derivative = quarter_car_rhs(t, state, corner, ...
     damper_velocity, damper_force, road_time, road_height)
 
 x1 = state(1);
@@ -275,13 +281,21 @@ x2 = state(3);
 x2_velocity = state(4);
 road = interp1(road_time, road_height, t, 'linear', 0);
 
-relative_velocity = x1_velocity - x2_velocity;
+relative_velocity = corner.motion_ratio*(x2_velocity - x1_velocity);
 relative_velocity = min(max(relative_velocity, damper_velocity(1)), ...
     damper_velocity(end));
-force = interp1(damper_velocity, damper_force, relative_velocity, 'linear');
+shaft_force = interp1(damper_velocity, damper_force, ...
+    relative_velocity, 'linear');
+damper_force_on_body = corner.motion_ratio*shaft_force;
 
-x1_acceleration = (-k*(x1 - x2) - force)/m1;
-x2_acceleration = (k*(x1 - x2) + force - kt*(x2 - road))/m2;
+spring_force_on_body = -corner.wheel_rate*(x1 - x2);
+normal_load = max(0, corner.static_tire_load + ...
+    corner.tire_rate*(road - x2));
+dynamic_tire_force = normal_load - corner.static_tire_load;
+x1_acceleration = (spring_force_on_body + damper_force_on_body) ...
+    / corner.sprung_mass;
+x2_acceleration = (-spring_force_on_body - damper_force_on_body + ...
+    dynamic_tire_force)/corner.unsprung_mass;
 
 derivative = [x1_velocity; x1_acceleration; ...
               x2_velocity; x2_acceleration];

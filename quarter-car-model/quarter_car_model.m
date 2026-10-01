@@ -2,10 +2,13 @@
 % QUARTER CAR MODEL - FRONT AXLE
 % =========================================================================
 
-m1 = 141.885/2;  % sprung mass, kg
-m2 =  22.36/2;   % unsprung mass, kg 
-k = 35683.525;   % spring rate, N/m
-kt = 101573.528; % tire spring rate, N/m
+vehicle = quarter_car_parameters();
+corner = vehicle.front;
+m1 = corner.sprung_mass;    % sprung mass, kg
+m2 = corner.unsprung_mass;  % unsprung mass, kg
+k = corner.wheel_rate;      % motion-ratio-adjusted wheel rate, N/m
+kt = corner.tire_rate;      % tire spring rate, N/m
+motion_ratio = corner.motion_ratio; % damper travel / wheel travel
 
 % --- OHLINS TTX25 DAMPER SETTINGS ---
 % Specify your desired clicks for Rebound (negative vel) and Compression (positive vel).
@@ -65,7 +68,9 @@ force_si = force_N;  % N
 % =========================================================================
 % SIMULATION & ODE SOLVER
 % =========================================================================
-c_crit = 2*sqrt(k*m1) * abs(vel_si);
+wheel_velocity = vel_si/motion_ratio;
+wheel_force = motion_ratio*force_si;
+c_crit = 2*sqrt(k*m1) * abs(wheel_velocity);
 c_table = [force_si'; vel_si'];
 
 dt = 0.001;  % time step, s
@@ -91,7 +96,8 @@ road_params = struct('height', 0.030, ... % 30 mm
 
 %[m1 0; 0 m2]*[x1"; x2"] + [c -c; -c c]*[x1'; x2'] + [k -k; -k k+kt]*[x1; x2] = [1 0; 1 kt]
 
-function dXdt = quarter_car(t, X, m1, m2, k, kt, c_table, t_vec, xt_vec)
+function dXdt = quarter_car(t, X, m1, m2, k, kt, motion_ratio, ...
+    static_tire_load, c_table, t_vec, xt_vec)
 
 x1 = X(1);
 x1_dot = X(2);
@@ -101,16 +107,23 @@ x2_dot = X(4);
 % interpolate road input
 xt = interp1(t_vec, xt_vec, t, 'linear', 0);
 
-% relative velocity
-v_rel = x1_dot - x2_dot;
+% Damper shaft velocity: positive compression, negative rebound.
+v_rel = motion_ratio*(x2_dot - x1_dot);
 
 % damper force (nonlinear)
 v_rel = min(max(v_rel, c_table(2,1)), c_table(2,end));
-c_force = interp1(c_table(2,:), c_table(1,:), v_rel, 'linear');
+c_force_shaft = interp1(c_table(2,:), c_table(1,:), v_rel, 'linear');
+c_force_wheel = motion_ratio*c_force_shaft;
 
-% equations of motion
-x1_ddot = (-k*(x1 - x2) - c_force) / m1;
-x2_ddot = ( k*(x1 - x2) + c_force - kt*(x2 - xt) ) / m2;
+% Unilateral tire contact: the road cannot pull downward on the tire.
+tire_load = max(0, static_tire_load + kt*(xt - x2));
+dynamic_tire_force = tire_load - static_tire_load;
+
+% Motion-ratio-adjusted equations of motion about static equilibrium.
+spring_force_on_body = -k*(x1 - x2);
+x1_ddot = (spring_force_on_body + c_force_wheel) / m1;
+x2_ddot = (-spring_force_on_body - c_force_wheel + ...
+    dynamic_tire_force) / m2;
 
 dXdt = [x1_dot;
         x1_ddot;
@@ -131,7 +144,9 @@ t_vec = 0:dt:tmax;
 % still resolves the 1 ms road-input table without sacrificing accuracy.
 opts = odeset('RelTol',1e-6,'AbsTol',1e-8,'MaxStep',0.01);
 
-[t_sol, X_sol] = ode45(@(t,X) quarter_car(t, X, m1, m2, k, kt, c_table, t_vec, xt), t_vec, X0, opts);
+[t_sol, X_sol] = ode45(@(t,X) quarter_car(t, X, m1, m2, k, kt, ...
+    motion_ratio, corner.static_tire_load, c_table, t_vec, xt), ...
+    t_vec, X0, opts);
 
 x1 = X_sol(:,1);  % sprung displacement
 x2 = X_sol(:,3);  % unsprung displacement
@@ -143,9 +158,10 @@ road_sol = interp1(t_vec, xt, t_sol, 'linear', 0);
 damping_ratio_actual = NaN(size(force_si));
 damping_ratio_design = NaN(size(c_designsmooth));
 nonzero_velocity = abs(vel_si) > eps;
-damping_ratio_actual(nonzero_velocity) = abs(force_si(nonzero_velocity)) ...
+damping_ratio_actual(nonzero_velocity) = abs(wheel_force(nonzero_velocity)) ...
     ./ c_crit(nonzero_velocity);
-damping_ratio_design(nonzero_velocity) = abs(c_designsmooth(nonzero_velocity)) ...
+damping_ratio_design(nonzero_velocity) = ...
+    abs(motion_ratio*c_designsmooth(nonzero_velocity)) ...
     ./ c_crit(nonzero_velocity);
 
 figure
