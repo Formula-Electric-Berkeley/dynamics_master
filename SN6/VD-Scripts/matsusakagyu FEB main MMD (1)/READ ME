@@ -1,0 +1,32 @@
+READ ME
+
+Gift from DUO
+This helps understand the effects of vehicle paramters through the Milliken Moment Diagram (Yaw-Moment).
+
+Credit: This uses the methods found in "Vehicle agile maneuvering: From rally drivers to a finite state machine approach" by Acosta, M, Kanarachos, S & Blundell, M. Chat GPT helped 
+with some of my code lol
+
+
+How it works: Please read the paper above. A .pdf can be found in the MMD folder as well (vehicle_agile_maneuveringv4.pdf). The Magic Formula shape F=Dsin(Carctan(Bx−E(Bx−arctanBx))) was used instead.
+
+
+Instructions: Run main_MMD.m to get a Milliken Moment Diagram (MMD). You can change vehicle paramters in the vehicle_params.m. You can also run overlay_MMD_sweep.m to sweep through wheelbase and track
+ratios to plot the envelope. You can simply call overlay_MMD_sweep(ratio, L_ref) to sweep through. Ratio is a 1xn matrix of desired sweeping ratios (L/t) and L_ref is the wheelbase to which scaling 
+of track is applied. Depending on the sweeping range, you might need to zoom in to the boundary to see as differences may be small.
+
+How to Interpret: The x axis is the lateral acceleration and the y axis is the yaw moment coefficient. Positive coefficients mean oversteer tendencies and negative means understeer tendencies. 
+The colorbar when running main_MMD.m shows yaw moment coefficient. The full diamond is the envelope of achievable states at a given speed. Each point on the surface corresponds to a steady-state 
+equilibrium for some steering angle δ and body sideslip β. The outer boundary/envelope (hull) represents tire saturation — the max lateral force / yaw moment combinations the car can generate. 
+Wider envelope means car can generate more lateral acceleration before saturation → more grip (tires, downforce, load transfer, etc.). Taller envelope means car can produce larger corrective 
+yaw moments → higher agility (ability to rotate into a corner). In essence, small, squashed diamond: limited grip and agility and large, tall diamond: lots of grip and strong yaw control authority. 
+
+Symmetric diamond (up/down): balanced car — equal ability to generate yaw in both directions (neutral balance). Skewed upward: tends toward oversteer (rear saturates first → extra yaw moment). 
+Skewed downward: tends toward understeer (front saturates first → insufficient yaw moment). Center (near 0,0): small δ,β → linear range, car responds proportionally. 
+Left/right tips: max lateral acceleration in steady cornering. Top/bottom tips: max yaw moment authority (think rapid turn-in, or stability control limits). 
+If the diamond leans left: car achieves higher yaw moments at lower lateral acceleration → agile but twitchy. 
+If it’s flat across the top: yaw moment authority saturates before lateral acceleration → car resists further yaw (classic understeer).
+
+Design Goals: You want a diamond that’s big enough (grip) and not too skewed downward (avoid heavy understeer). To understand the tradeoff between agility and stability, compare multiple MMDs 
+through sweeping.
+
+Please Note: Track_and_Wheelbase.m, solve_point.m, run_MMD_sweep.m, and build_diamond.m aren't used in main_MMD.m and are old code.
